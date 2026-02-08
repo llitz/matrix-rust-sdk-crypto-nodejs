@@ -8,6 +8,7 @@ const platform = process.env.npm_config_target_platform || process.env.npm_confi
 const arch = process.env.npm_config_target_arch || process.env.npm_config_arch || process.arch;
 
 const DOWNLOADS_BASE_URL = "https://github.com/matrix-org/matrix-rust-sdk-crypto-nodejs/releases/download";
+const MIRROR_DOWNLOADS_BASE_URL = process.env.MATRIX_CRYPTO_MIRROR_BASE_URL || "https://github.com/llitz/matrix-rust-sdk-crypto-nodejs/releases/download";
 const CURRENT_VERSION = `v${version}`;
 
 const byteHelper = function (value) {
@@ -20,39 +21,72 @@ const byteHelper = function (value) {
 };
 
 function download_lib(libname) {
-    let startTime = new Date();
-
-    const url = `${DOWNLOADS_BASE_URL}/${CURRENT_VERSION}/${libname}`;
-    console.info(`Downloading lib ${libname} from ${url}`);
-    const dl = new DownloaderHelper(url, __dirname, {
-        override: true,
-    });
+    const urls =
+        libname === "matrix-sdk-crypto.linux-x64-musl.node"
+            ? [
+                  `${MIRROR_DOWNLOADS_BASE_URL}/${CURRENT_VERSION}/${libname}`,
+                  `${DOWNLOADS_BASE_URL}/${CURRENT_VERSION}/${libname}`,
+              ]
+            : [`${DOWNLOADS_BASE_URL}/${CURRENT_VERSION}/${libname}`];
 
     const proxy = process.env.https_proxy ?? process.env.HTTPS_PROXY;
-    if (proxy) {
-        const proxyAgent = new HttpsProxyAgent(proxy);
-        dl.updateOptions({
-            httpsRequestOptions: { agent: proxyAgent },
-        });
-    }
 
-    dl.on("end", () => console.info("Download Completed"));
-    dl.on("error", (err) => console.info("Download Failed", err));
-    dl.on("progress", (stats) => {
-        const progress = stats.progress.toFixed(1);
-        const speed = byteHelper(stats.speed);
-        const downloaded = byteHelper(stats.downloaded);
-        const total = byteHelper(stats.total);
-
-        // print every one second (`progress.throttled` can be used instead)
-        const currentTime = new Date();
-        const elaspsedTime = currentTime - startTime;
-        if (elaspsedTime > 1000) {
-            startTime = currentTime;
-            console.info(`${speed}/s - ${progress}% [${downloaded}/${total}]`);
+    const tryDownload = (index) => {
+        if (index >= urls.length) {
+            console.warn(`All download sources failed for ${libname}`);
+            return;
         }
-    });
-    dl.start().catch((err) => console.error(err));
+
+        let startTime = new Date();
+        let settled = false;
+        const url = urls[index];
+        console.info(`Downloading lib ${libname} from ${url}`);
+        const dl = new DownloaderHelper(url, __dirname, {
+            override: true,
+        });
+
+        if (proxy) {
+            const proxyAgent = new HttpsProxyAgent(proxy);
+            dl.updateOptions({
+                httpsRequestOptions: { agent: proxyAgent },
+            });
+        }
+
+        const fail = (err) => {
+            if (settled) {
+                return;
+            }
+            settled = true;
+            console.info("Download Failed", err);
+            tryDownload(index + 1);
+        };
+
+        dl.on("end", () => {
+            if (settled) {
+                return;
+            }
+            settled = true;
+            console.info("Download Completed");
+        });
+        dl.on("error", fail);
+        dl.on("progress", (stats) => {
+            const progress = stats.progress.toFixed(1);
+            const speed = byteHelper(stats.speed);
+            const downloaded = byteHelper(stats.downloaded);
+            const total = byteHelper(stats.total);
+
+            // print every one second (`progress.throttled` can be used instead)
+            const currentTime = new Date();
+            const elaspsedTime = currentTime - startTime;
+            if (elaspsedTime > 1000) {
+                startTime = currentTime;
+                console.info(`${speed}/s - ${progress}% [${downloaded}/${total}]`);
+            }
+        });
+        dl.start().catch(fail);
+    };
+
+    tryDownload(0);
 }
 
 function isMusl() {
