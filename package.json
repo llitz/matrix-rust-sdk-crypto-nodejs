@@ -1,11 +1,11 @@
 {
-    "name": "@matrix-org/matrix-sdk-crypto-nodejs",
+    "name": "@llitz/matrix-sdk-crypto-nodejs",
     "version": "0.4.0",
     "main": "index.js",
     "types": "index.d.ts",
     "repository": {
         "type": "git",
-        "url": "https://github.com/matrix-org/matrix-rust-sdk-crypto-nodejs"
+        "url": "git+https://github.com/llitz/matrix-rust-sdk-crypto-nodejs.git"
     },
     "napi": {
         "name": "matrix-sdk-crypto",
@@ -39,5 +39,12 @@
         "https-proxy-agent": "^7.0.5",
         "node-downloader-helper": "^2.1.9"
     },
-    "packageManager": "yarn@1.22.19+sha512.ff4579ab459bb25aa7c0ff75b62acebe576f6084b36aa842971cf250a5d8c6cd3bc9420b22ce63c7f93a0857bc6ef29291db39c3e7a23aab5adfd5a4dd6c5d71"
+    "packageManager": "yarn@1.22.19+sha512.ff4579ab459bb25aa7c0ff75b62acebe576f6084b36aa842971cf250a5d8c6cd3bc9420b22ce63c7f93a0857bc6ef29291db39c3e7a23aab5adfd5a4dd6c5d71",
+    "homepage": "https://github.com/llitz/matrix-rust-sdk-crypto-nodejs#readme",
+    "bugs": {
+        "url": "https://github.com/llitz/matrix-rust-sdk-crypto-nodejs/issues"
+    },
+    "publishConfig": {
+        "registry": "https://npm.pkg.github.com"
+    }
 }
